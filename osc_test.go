@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/toolingdev/ptz-controller/sdk/addon"
+	"github.com/toolingdev/jadeck/sdk/addon"
 )
 
 func TestCodecRoundTrip(t *testing.T) {

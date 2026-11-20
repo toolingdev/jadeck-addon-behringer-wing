@@ -1,4 +1,4 @@
-// Behringer WING: a PTZ controller add-on. Channel mutes over OSC, every
+// Behringer WING: a jadeck add-on. Channel mutes over OSC, every
 // change read back from the console. X32 / M32 experimental.
 package main
 
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/toolingdev/ptz-controller/sdk/addon"
+	"github.com/toolingdev/jadeck/sdk/addon"
 )
 
 // Version is set by the release build.
@@ -30,7 +30,7 @@ var sample = map[string]any{"/api/mixer/status": map[string]any{
 func spec() addon.Spec {
 	return addon.Spec{
 		Manifest: addon.Manifest{
-			ID: "behringer-wing", Name: "Behringer WING", Version: Version, Publisher: "PTZ Controller", APIVersion: addon.APIVersion, Repo: "toolingdev/ptz-addon-behringer-wing",
+			ID: "behringer-wing", Name: "Behringer WING", Version: Version, Publisher: "jadeck", APIVersion: addon.APIVersion, Repo: "toolingdev/jadeck-addon-behringer-wing",
 			Description: "Mute and unmute WING channels, every change read back. X32/M32 experimental.",
 			Reaches:     "The consoles you add as connections (OSC on the local network)",
 			ConnectionTypes: []addon.ConnectionType{{
