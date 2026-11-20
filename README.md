@@ -1,5 +1,9 @@
 # Behringer WING — PTZ controller add-on
 
+Mute and unmute WING channels, every change read back. X32/M32 experimental.
+
+Install: it ships with the controller (Settings → Add-ons); newer releases of this repository arrive as updates there.
+
 Build every platform and the `.ptzaddon` package:
 
 ```bash
