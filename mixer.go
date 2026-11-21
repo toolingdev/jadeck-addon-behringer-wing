@@ -19,8 +19,9 @@ type Preset struct {
 }
 
 var Presets = map[string]Preset{
-	// WING Remote Protocols (P.-G. Maillot). Verified shape in the
-	// Python build's tests; live read-back confirms every write.
+	// The WING's mute address in the generic driver. WING connections
+	// use the full client (wing.go); this entry only keeps the generic
+	// driver's WING dialect (3-value replies) under test.
 	"wing": {Port: 2223, MuteAddress: "/ch/{n}/mute", MutedValue: 1, Probe: "/?", MaxChannel: 48},
 	// X32/M32 OSC (unofficial X32 OSC protocol doc). /mix/on is "on",
 	// so 0 = muted. Untested against a real desk — experimental.
@@ -108,13 +109,8 @@ func (m *Mixer) GetMute(ctx context.Context, ch int) (bool, error) {
 	if addr != a || len(vals) == 0 {
 		return false, fmt.Errorf("unexpected mute reply for channel %d", ch)
 	}
-	var v int
-	switch x := vals[0].(type) {
-	case int32:
-		v = int(x)
-	case float32:
-		v = int(x + 0.5)
-	default:
+	v, ok := oscInt(vals)
+	if !ok {
 		return false, fmt.Errorf("unexpected mute value type for channel %d", ch)
 	}
 	return v == m.p.MutedValue, nil
@@ -131,4 +127,28 @@ func (m *Mixer) SetMute(ctx context.Context, ch int, muted bool) error {
 	msg, _ := Encode(m.muteAddr(ch), int32(v))
 	_, _, err := m.exchange(ctx, msg, false) // OSC set is fire-and-forget; callers read back
 	return err
+}
+
+// oscInt reads a whole-number reply. An X32 answers one int; a WING
+// answers the same value three ways (string "1", float 1.0, int 1), the
+// string first. The int is preferred, then the float, then the text.
+func oscInt(vals []any) (int, bool) {
+	for _, v := range vals {
+		if x, ok := v.(int32); ok {
+			return int(x), true
+		}
+	}
+	for _, v := range vals {
+		if x, ok := v.(float32); ok {
+			return int(x + 0.5), true
+		}
+	}
+	for _, v := range vals {
+		if x, ok := v.(string); ok {
+			if n, err := strconv.Atoi(strings.TrimSpace(x)); err == nil {
+				return n, true
+			}
+		}
+	}
+	return 0, false
 }

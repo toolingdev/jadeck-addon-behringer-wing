@@ -1,16 +1,12 @@
-// Package osc is a generic OSC (Open Sound Control) mixer driver plus a
-// small OSC 1.0 codec. Consoles differ only in addresses and polarity,
-// so each console is a preset of one driver:
+// A small OSC 1.0 codec, plus (mixer.go) a generic OSC mute driver used
+// for the X32/M32 and "other OSC desk" presets. Consoles differ only in
+// addresses and polarity, so each is a preset of one driver:
 //
-//	wing  Behringer WING   UDP 2223  /ch/{n}/mute       1 = muted   probe /?
 //	x32   Behringer X32/M32, Midas   UDP 10023 /ch/{nn}/mix/on  0 = muted   probe /info
+//	(other) port + muteAddress + mutedValue + probe from the advanced fields
 //
-// addon.json:
-//
-//	{"driver": "osc", "preset": "wing", "host": "10.1.10.50"}
-//	{"driver": "osc", "preset": "x32",  "host": "10.1.10.60"}
-//	{"driver": "osc", "host": "...", "port": 9000, "muteAddress": "/strip/{n}/mute",
-//	 "mutedValue": 1, "probe": "/info", "maxChannel": 32}
+// The WING itself has its own client (wing.go): OSC on UDP 2223 for reads
+// and writes, the native protocol on TCP 2222 for live changes and meters.
 package main
 
 import (
@@ -30,7 +26,8 @@ func pad4(b []byte) []byte {
 
 func oscString(s string) []byte { return pad4(append([]byte(s), 0)) }
 
-// Encode builds one OSC message. args: int, int32, float32, float64, string.
+// Encode builds one OSC message. args: bool, int, int32, float32, float64,
+// string, []byte (blob).
 func Encode(address string, args ...any) ([]byte, error) {
 	tags := ","
 	var body []byte
@@ -58,6 +55,10 @@ func Encode(address string, args ...any) ([]byte, error) {
 		case string:
 			tags += "s"
 			body = append(body, oscString(v)...)
+		case []byte:
+			tags += "b"
+			body = binary.BigEndian.AppendUint32(body, uint32(len(v)))
+			body = pad4(append(body, v...))
 		default:
 			return nil, fmt.Errorf("osc: cannot encode %T", a)
 		}
@@ -86,7 +87,8 @@ func readString(b []byte, off int) (string, int, error) {
 }
 
 // Decode parses one OSC message into (address, values). Values are
-// int32, float32 or string. A garbled reply is an error, never trusted.
+// int32, float32, string or []byte (blob). A garbled reply is an error,
+// never trusted.
 func Decode(b []byte) (string, []any, error) {
 	if len(b) == 0 || b[0] != '/' {
 		return "", nil, errMalformed
@@ -123,6 +125,17 @@ func Decode(b []byte) (string, []any, error) {
 				return "", nil, err
 			}
 			vals = append(vals, s)
+		case 'b':
+			if off+4 > len(b) {
+				return "", nil, errMalformed
+			}
+			n := int(binary.BigEndian.Uint32(b[off:]))
+			off += 4
+			if n < 0 || off+n > len(b) {
+				return "", nil, errMalformed
+			}
+			vals = append(vals, append([]byte(nil), b[off:off+n]...))
+			off += (n + 3) / 4 * 4
 		default:
 			return "", nil, fmt.Errorf("osc: unsupported typetag %q", t)
 		}

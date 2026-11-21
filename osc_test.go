@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -76,6 +77,10 @@ func fakeConsole(t *testing.T, p Preset, probeReply string) (string, func() map[
 						v = 1 - p.MutedValue // live by default
 					}
 					r, _ := Encode(addr, int32(v))
+					if strings.Contains(strings.ToLower(probeReply), "wing") {
+						// a real WING answers string, float and int, string first
+						r, _ = Encode(addr, strconv.Itoa(v), float32(v), int32(v))
+					}
 					pc.WriteTo(r, from)
 				}
 				mu.Unlock()
