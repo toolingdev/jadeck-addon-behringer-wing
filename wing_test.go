@@ -552,7 +552,7 @@ func TestManifest(t *testing.T) {
 	if err := m.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if m.APIVersion != 2 || m.Version != "2.0.0" {
+	if m.APIVersion != 2 || m.Version != Version {
 		t.Fatal(m.APIVersion, m.Version)
 	}
 	var b bytes.Buffer

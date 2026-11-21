@@ -70,7 +70,7 @@ func parseIdentity(s string) (identity, bool) {
 // ModelName is a friendly name for the model code.
 func (id identity) ModelName() string {
 	switch strings.ToLower(id.Model) {
-	case "ngc-full":
+	case "ngc-full", "wing-fullsize":
 		return "WING (full size)"
 	case "":
 		return "WING"
@@ -337,6 +337,14 @@ func (w *Wing) readAll(ctx context.Context, paths []string) (failed int, firstEr
 func (w *Wing) hello(ctx context.Context) (identity, error) {
 	r, err := w.osc.raw(ctx, "/?")
 	if err != nil {
+		// A real WING (fw 3.1.2) answers /? on the address it also uses for
+		// errors ("/*"), so the identity arrives looking like an error text.
+		var ce consoleError
+		if errors.As(err, &ce) {
+			if id, ok := parseIdentity(strings.SplitN(string(ce), "; ", 2)[0]); ok {
+				return id, nil
+			}
+		}
 		if errors.Is(err, errNoAnswer) {
 			return identity{}, errOffline
 		}

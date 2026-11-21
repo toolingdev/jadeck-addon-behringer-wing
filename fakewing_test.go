@@ -382,7 +382,8 @@ func (f *fakeWing) handleOSC(addr string, vals []any) [][]byte {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if addr == "/?" {
-		b, _ := Encode("/?", "WING,127.0.0.1,Test WING,ngc-full,S0000001,3.1.2")
+		// like the real console (fw 3.1.2): the identity comes back on "/*"
+		b, _ := Encode("/*", "WING,127.0.0.1,Test WING,wing-fullsize,S0000001,3.1.2-0-g53fb5e0d:release")
 		return [][]byte{b}
 	}
 	if len(vals) == 1 {

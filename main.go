@@ -15,11 +15,12 @@ import (
 )
 
 // Version is set by the release build.
-var Version = "2.0.0"
+var Version = "2.0.1"
 
 func main() { addon.Serve(spec()) }
 
-const changelog = "2.0: a full WING control surface. Mutes with the console's names and colours (effective mute shown), " +
+const changelog = "2.0.1: connects to a real WING (fw 3.1.2), which answers the identity query on its error address and calls itself wing-fullsize. " +
+	"2.0: a full WING control surface. Mutes with the console's names and colours (effective mute shown), " +
 	"faders and DCAs with live LED meters, a meter bridge, mute groups, scenes (list, go, next, previous, by tag), " +
 	"USB recorder (record, stop and new file are press-and-hold, 5 s by default) and player, talkback, clear solo and a console status tile. Widgets pick their own strips and order. " +
 	"Live updates over the WING's native port, consoles on the network listed when adding a connection, locks and " +
