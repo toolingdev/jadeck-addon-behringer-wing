@@ -1,7 +1,8 @@
 // Faders widget (and DCA faders: <body data-set="dca">), drawn after
 // design/wing-polished.svg. Any number of strips in the widget's order;
 // wide boxes get one row, tall or narrow ones wrap into rows; strips are
-// never narrower than 56 px and nothing scrolls.
+// never narrower than 56 px nor wider than a console strip (160 px; one or
+// two strips sit centred in a big box) and nothing scrolls.
 // Each strip: the console's colour band, "CH 5" (+ ST chip when the
 // console says stereo), name, preamp GAIN knob (or NO PREAMP), dB scale,
 // fader, LED meter (L/R for stereo), level pill, MUTE (with what else
@@ -29,7 +30,14 @@
   // minimum height of a strip for the parts it shows
   function minH(o, withGain) { return 64 + (withGain ? 96 : 0) + 140 + (o.readout ? 30 : 0) + (o.mute ? 68 : 0); }
 
+  var MAXW = 160; // a console strip's width: one or two strips don't stretch to the whole box
+
   function layout(n) {
+    var L = fit(n);
+    L.colW = Math.min(L.colW, MAXW);
+    return L;
+  }
+  function fit(n) {
     var o = opts(), w = stripsEl.clientWidth || W.ctx.size.w || window.innerWidth, h = stripsEl.clientHeight || 300, gap = 10, minW = 56;
     var mh = minH(o, false), maxRows = Math.max(1, Math.floor((h + gap) / (mh + gap)));
     for (var r = 1; r <= maxRows; r++) {
@@ -46,12 +54,13 @@
     if (!ids.length) {
       el("div", "empty", stripsEl, isDca ? "No DCAs picked (widget settings → DCAs)." : "No strips picked (widget settings → Strips).");
       moreEl.textContent = "";
+      stripsEl.style.gridTemplateColumns = stripsEl.style.gridTemplateRows = "minmax(0, 1fr)";
       layoutKey = "";
       return;
     }
     var L = layout(ids.length), o = opts();
     layoutKey = L.rows + "x" + L.cols + ":" + L.shown;
-    stripsEl.style.gridTemplateColumns = "repeat(" + L.cols + ", minmax(0, 1fr))";
+    stripsEl.style.gridTemplateColumns = "repeat(" + L.cols + ", minmax(0, " + MAXW + "px))";
     stripsEl.style.gridTemplateRows = "repeat(" + L.rows + ", minmax(0, 1fr))";
     moreEl.textContent = ids.length > L.shown ? "+" + (ids.length - L.shown) + " more: make the widget bigger" : "";
     var showGain = o.gain && !isDca && L.rowH >= minH(o, true);

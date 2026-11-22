@@ -20,7 +20,7 @@ header { display: flex; align-items: center; gap: 8px; min-height: 18px; }
 header h1 { margin: 0; font-size: 13px; font-weight: 700; white-space: nowrap; }
 header .note { flex: 1; min-width: 0; color: var(--w-dim); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header .note.bad { color: var(--color-bad, #f87171); }
-#strips { flex: 1; min-height: 0; display: grid; gap: 10px; overflow: hidden; }
+#strips { flex: 1; min-height: 0; display: grid; gap: 10px; overflow: hidden; justify-content: center; } /* strips cap at 160 px (faders.js) and centre */
 #more { color: var(--w-dim); font-size: 10px; text-align: right; }
 #more:empty { display: none; }
 .empty { display: flex; align-items: center; justify-content: center; text-align: center; color: var(--w-dim); padding: 8px; grid-column: 1 / -1; height: 100%; }
