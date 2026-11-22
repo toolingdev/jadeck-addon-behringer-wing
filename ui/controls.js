@@ -4,19 +4,14 @@
 // lock that must be opened before anything changes (it closes again 30 s
 // after the last touch). Values shown are always the console's: after a
 // write the add-on reads the value back and the cell shows that.
+// Tabs, knobs, buttons and the lock are the shared frame kit's (JK).
 (function () {
   "use strict";
-  var W = window.Wing, law = W.law;
+  var W = window.Wing, JK = window.JK;
+  if (!W) return;
+  var law = W.law, el = JK.el;
   var CELL_W = 94, CELL_H = 118; // grid cell incl. gap
   var RELOCK_MS = 30000;
-
-  function el(tag, cls, parent, text) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text != null) e.textContent = text;
-    if (parent) parent.appendChild(e);
-    return e;
-  }
 
   // Friendly names for the parameters the doc lists (default models).
   var NAMES = {
@@ -87,25 +82,24 @@
     this.locked = true;
     this.lastTouch = 0;
     this.busy = {};
-    this.tabsEl = el("div", "tabs", root);
+    // the kit's lock: nothing turns until "TAP TO EDIT"; locks again 30 s
+    // after the last touch
+    this.lock = JK.lock({ relockMs: RELOCK_MS, onChange: function (on) { self.locked = on; self.lastTouch = Date.now(); self.draw(); } });
+    this.tabsEl = JK.segmented({ options: [], onChange: function (v) { self.tab = v; self.page = 0; self.draw(); } });
+    root.appendChild(this.tabsEl);
     this.cellsEl = el("div", "cells", root);
     this.pagerEl = el("div", "pager", root);
-    this.prev = el("button", "pg", this.pagerEl, "◀");
+    this.prev = JK.button({ label: "◀", title: "Previous page", onClick: function () { self.page--; self.draw(); } });
+    this.prev.classList.add("pg");
+    this.pagerEl.appendChild(this.prev);
     this.pageText = el("span", "pgt", this.pagerEl);
-    this.next = el("button", "pg", this.pagerEl, "▶");
-    this.prev.type = this.next.type = "button";
-    this.prev.onclick = function () { self.page--; self.draw(); };
-    this.next.onclick = function () { self.page++; self.draw(); };
+    this.next = JK.button({ label: "▶", title: "Next page", onClick: function () { self.page++; self.draw(); } });
+    this.next.classList.add("pg");
+    this.pagerEl.appendChild(this.next);
     this.hintEl = el("div", "hint", root, "Drag up/down to turn · Shift or two fingers: fine · double-tap resets · values read back from the console");
-    setInterval(function () { if (!self.locked && Date.now() - self.lastTouch > RELOCK_MS) self.setLocked(true); }, 1000);
   }
-  Panel.prototype.setLocked = function (on) {
-    this.locked = on;
-    this.lastTouch = Date.now();
-    if (this.onLock) this.onLock(on);
-    this.draw();
-  };
-  Panel.prototype.touch = function () { this.lastTouch = Date.now(); };
+  Panel.prototype.setLocked = function (on) { this.lock.set(on); };
+  Panel.prototype.touch = function () { this.lastTouch = Date.now(); this.lock.touch(); };
   Panel.prototype.set = function (sections, disabled) {
     this.sections = sections || [];
     this.disabled = disabled;
@@ -115,13 +109,8 @@
   };
   Panel.prototype.draw = function () {
     var self = this;
-    this.tabsEl.textContent = "";
     this.tabsEl.style.display = this.sections && this.sections.length > 1 ? "" : "none";
-    (this.sections || []).forEach(function (s) {
-      var b = el("button", "tab" + (s.id === self.tab ? " on" : ""), self.tabsEl, s.title);
-      b.type = "button";
-      b.onclick = function () { self.tab = s.id; self.page = 0; self.draw(); };
-    });
+    this.tabsEl.set(this.tab, (this.sections || []).map(function (s) { return { value: s.id, label: s.title }; }));
     var sec = (this.sections || []).filter(function (s) { return s.id === self.tab; })[0];
     var params = sec ? sec.params : [];
     this.pagerEl.style.display = "none";
@@ -137,8 +126,8 @@
     }
     this.page = Math.min(Math.max(0, this.page), pages - 1);
     this.pageText.textContent = (this.page + 1) + " / " + pages;
-    this.prev.disabled = this.page === 0;
-    this.next.disabled = this.page >= pages - 1;
+    this.prev.set({ disabled: this.page === 0 });
+    this.next.set({ disabled: this.page >= pages - 1 });
     this.cells = {};
     if (!params.length) { el("div", "empty", this.cellsEl, sec ? "Nothing to show here for this strip." : "Nothing to show."); return; }
     params.slice(this.page * per, this.page * per + per).forEach(function (p) { self.cell(p); });
@@ -159,13 +148,13 @@
       });
     }
     if (p.kind === "bool") {
-      var b = el("button", "pon" + (p.value >= 1 ? " on" : ""), c, p.value >= 1 ? "ON" : "OFF");
-      b.type = "button";
-      b.disabled = !canEdit;
-      b.onclick = function () {
-        b.disabled = true;
-        send(p.value >= 1 ? 0 : 1).then(function () { b.disabled = !canEdit; b.classList.toggle("on", p.value >= 1); b.textContent = p.value >= 1 ? "ON" : "OFF"; });
-      };
+      // a kit button: amber (selected) when on
+      var b = JK.button({ label: p.value >= 1 ? "ON" : "OFF", active: p.value >= 1, disabled: !canEdit, title: nameOf(p),
+        onClick: function () {
+          return send(p.value >= 1 ? 0 : 1).then(function () { b.set({ label: p.value >= 1 ? "ON" : "OFF", active: p.value >= 1 }); });
+        } });
+      b.classList.add("pon");
+      c.appendChild(b);
       el("div", "kl", c, nameOf(p));
       return;
     }
@@ -225,15 +214,10 @@
     if (redraw) this.draw();
   };
 
-  // lockButton draws the lock chip into parent and wires it to panel.
+  // lockButton puts the panel's lock chip (the kit's) into parent.
   function lockButton(parent, panel) {
-    var b = el("button", "lock", parent);
-    b.type = "button";
-    function paint(on) { b.textContent = on ? "LOCKED · TAP TO EDIT" : "EDITING · TAP TO LOCK"; b.classList.toggle("open", !on); b.title = on ? "Tap to change values (locks again after 30 s)" : "Tap to lock"; }
-    panel.onLock = paint;
-    paint(true);
-    b.onclick = function () { panel.setLocked(!panel.locked); };
-    return b;
+    parent.appendChild(panel.lock.el);
+    return panel.lock.el;
   }
 
   W.Panel = Panel;

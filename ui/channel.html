@@ -3,14 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="color-scheme" content="dark" />
+    <!-- the shared jadeck frame kit (design/WIDGETS-V2.md "Shared frame kit") -->
+    <link rel="stylesheet" href="/api/kit/v1/kit.css" />
     <link rel="stylesheet" href="wing.css" />
   </head>
-  <body class="panel-page">
-    <header><select id="pick" class="chip" aria-label="Channel"></select><span class="note" id="note"></span><span id="tools"></span></header>
+  <body class="jk panel-page">
+    <header></header>
+    <select id="pick" class="chip" aria-label="Channel"></select>
     <div id="head" class="chead"></div>
     <div id="panel" class="panel"></div>
+    <script src="/api/kit/v1/kit.js"></script>
     <script src="common.js"></script>
-    <script src="knob.js"></script>
     <script src="controls.js"></script>
     <script src="channel.js"></script>
   </body>

@@ -5,6 +5,7 @@
 (function () {
   "use strict";
   var W = window.Wing;
+  if (!W) return;
   var stripsEl = document.getElementById("strips"), moreEl = document.getElementById("more"), noteEl = document.getElementById("note");
   var peaks = W.peaks();
   var ids = [], rows = {}, data = null, timer = 0;

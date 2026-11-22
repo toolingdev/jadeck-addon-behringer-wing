@@ -3,12 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="color-scheme" content="dark" />
+    <!-- the shared jadeck frame kit (design/WIDGETS-V2.md "Shared frame kit") -->
+    <link rel="stylesheet" href="/api/kit/v1/kit.css" />
     <link rel="stylesheet" href="wing.css" />
   </head>
-  <body>
-    <header><h1>Meters</h1><span class="note" id="note"></span></header>
+  <body class="jk" data-title="Meters">
+    <header></header>
     <div id="strips"></div>
     <div id="more"></div>
+    <script src="/api/kit/v1/kit.js"></script>
     <script src="common.js"></script>
     <script src="meters.js"></script>
   </body>

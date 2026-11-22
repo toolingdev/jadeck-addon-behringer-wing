@@ -3,14 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="color-scheme" content="dark" />
+    <!-- the shared jadeck frame kit (design/WIDGETS-V2.md "Shared frame kit") -->
+    <link rel="stylesheet" href="/api/kit/v1/kit.css" />
     <link rel="stylesheet" href="wing.css" />
   </head>
-  <body data-set="dca">
-    <header><h1>DCA faders</h1><span class="note" id="note"></span></header>
-    <div id="strips"></div>
-    <div id="more"></div>
+  <body class="jk" data-set="dca" data-title="DCA faders">
+    <header></header>
+    <div id="strips" class="jk-strips"></div>
+    <div id="more" class="jk-more"></div>
+    <script src="/api/kit/v1/kit.js"></script>
     <script src="common.js"></script>
-    <script src="knob.js"></script>
     <script src="faders.js"></script>
   </body>
 </html>

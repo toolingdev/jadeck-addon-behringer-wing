@@ -6,6 +6,7 @@
 (function () {
   "use strict";
   var W = window.Wing;
+  if (!W) return;
   var panelEl = document.getElementById("panel"), noteEl = document.getElementById("note");
   var panel = new W.Panel(panelEl, function (p, v) { return W.action("set_param", { path: p.path, value: v }); });
   panel.onError = function (e) { note(e, true); };

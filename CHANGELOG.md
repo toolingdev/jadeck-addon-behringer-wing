@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Widgets use jadeck's shared frame kit** (`/api/kit/v1`, needs jadeck
+  0.6 or newer): the fader strip, knob, LED meter, buttons, tabs, lock
+  and header are the kit's, so they match jadeck and the other add-ons.
+  `ui/knob.js` and the copies in `ui/common.js` / `ui/wing.css` are gone.
+  Same look; a fader cap at +10 or −∞ no longer overlaps the name or the
+  level pill.
+
 ## 2.0.0
 
 Needs jadeck 0.5.0 or newer (widgets v2, add-on SDK v0.3.0).

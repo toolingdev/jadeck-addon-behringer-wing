@@ -1,15 +1,26 @@
 // Shared bridge code for the WING frame widgets (design/WIDGETS-V2.md):
 // init (may arrive again), state, size, theme from the host; action and
-// resource requests to it. Plain ES5-ish JS, no build step.
+// resource requests to it. Plain ES5-ish JS, no build step. The controls
+// (header, buttons, fader strip, knob, LED meter, segmented, lock) are the
+// shared jadeck frame kit's (window.JK, from /api/kit/v1/kit.js, loaded
+// before this; design/WIDGETS-V2.md "Shared frame kit").
 (function () {
   "use strict";
+  var JK = window.JK;
+  if (!JK) { // a jadeck from before the shared frame kit
+    document.body.textContent = "This widget needs a newer jadeck (0.6 or later).";
+    document.body.style.cssText = "color:#8d96a5;font:12px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;height:100%;margin:0;padding:8px";
+    return;
+  }
+  // header: title · note … tools (the note and tools keep their old ids)
+  var hdr = JK.header({ title: document.body.getAttribute("data-title") || "" });
+  hdr.el.querySelector(".jk-note").id = "note";
+  hdr.right.id = "tools";
   var host = window.parent, seq = 0, pending = {};
   var ctx = { state: {}, settings: {}, editing: false, size: { w: 0, h: 0 }, ready: false };
   var listeners = [];
 
-  function applyTheme(theme) {
-    for (var k in theme || {}) if (k.indexOf("--") === 0) document.documentElement.style.setProperty(k, theme[k]);
-  }
+  function applyTheme(theme) { JK.theme(theme); }
   function emit(kind) { for (var i = 0; i < listeners.length; i++) listeners[i](kind, ctx); }
 
   window.addEventListener("message", function (e) {
@@ -25,6 +36,7 @@
         applyTheme(m.theme);
         ctx.ready = true;
         document.body.classList.toggle("editing", ctx.editing);
+        JK.setEditing(ctx.editing);
         emit("init");
         break;
       case "state": ctx.state = m.state || {}; emit("state"); break;
@@ -53,6 +65,8 @@
 
   window.Wing = {
     ctx: ctx,
+    hdr: hdr,
+    note: function (text, bad) { hdr.note(text, bad); },
     // on registers a listener; one added after init gets it right away.
     on: function (fn) { listeners.push(fn); if (ctx.ready) setTimeout(function () { fn("init", ctx); }, 0); },
     action: function (name, params) { return call({ t: "action", name: name, params: params || {} }); },
@@ -84,61 +98,14 @@
       if (onlyKind) ids = ids.filter(function (x) { return x.indexOf(onlyKind + ":") === 0; });
       return ids.slice(0, 64);
     },
-    // law: the drawn fader scale (design/wing-polished.svg): +10 at the
-    // top, 0 dB at 78 %, -50 at 10 %, -inf at the bottom. Drawing only;
-    // levels go to the console in dB.
-    law: (function () {
-      var P = [[0, -144], [0.0001, -90], [0.10, -50], [0.23, -30], [0.37, -20], [0.54, -10], [0.66, -5], [0.78, 0], [0.90, 5], [1, 10]];
-      return {
-        toPos: function (db) {
-          if (db == null || db <= -144) return 0;
-          for (var i = 1; i < P.length; i++) if (db <= P[i][1]) return P[i - 1][0] + (P[i][0] - P[i - 1][0]) * (db - P[i - 1][1]) / (P[i][1] - P[i - 1][1]);
-          return 1;
-        },
-        toDb: function (pos) {
-          if (pos <= 0) return -144;
-          for (var i = 1; i < P.length; i++) if (pos <= P[i][0]) return Math.round((P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (pos - P[i - 1][0]) / (P[i][0] - P[i - 1][0])) * 10) / 10;
-          return 10;
-        },
-        ticks: [10, 5, 0, -5, -10, -20, -30, -50, -144],
-      };
-    })(),
-    // led draws a segmented meter (little squares, green → amber → red,
-    // a peak-hold square) along the fader scale; cols = [{level, peak}],
-    // one column for mono, two (L, R) for stereo. segs = how many.
-    led: function (cv, cols, segs) {
-      var dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
-      if (!w || !h) return;
-      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-      var g = cv.getContext("2d"), law = window.Wing.law;
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g.clearRect(0, 0, w, h);
-      var n = typeof segs === "number" ? segs : Math.max(8, Math.min(30, Math.floor(h / 10)));
-      var gap = n * 3 > h ? 1 : 2, sh = Math.max(0.5, (h - gap * (n - 1)) / n), cgap = cols.length > 1 ? 4 : 0, cw = (w - cgap * (cols.length - 1)) / cols.length;
-      for (var c = 0; c < cols.length; c++) {
-        var lv = cols[c].level, pk = cols[c].peak, x = c * (cw + cgap);
-        for (var i = 0; i < n; i++) {
-          var db = law.toDb((i + 0.5) / n), y = h - (i + 1) * sh - i * gap;
-          var top = law.toDb((i + 1) / n);
-          var lit = lv != null && lv >= db, hold = !lit && pk != null && pk >= db && pk < top + 0.01;
-          g.fillStyle = lit || hold ? (db >= 2 ? "#e5484d" : db >= -6 ? "#f5a524" : "#30a46c") : "#1c2128";
-          g.globalAlpha = hold ? 0.85 : 1;
-          var r = Math.max(0, Math.min(1.2, sh / 3));
-          if (g.roundRect) { g.beginPath(); g.roundRect(x, y, cw, sh, r); g.fill(); } else g.fillRect(x, y, cw, sh);
-        }
-      }
-      g.globalAlpha = 1;
-    },
-    // peaks keeps peak-hold values per key (1.5 s hold, then falls).
-    peaks: function () {
-      var m = {};
-      return function (key, db) {
-        var now = Date.now(), p = m[key];
-        if (db == null) return p ? p.v : null;
-        if (!p || db >= p.v || now - p.at > 1500) { m[key] = p = { v: db, at: now }; }
-        return p.v;
-      };
-    },
+    // The fader scale (+10 at the top, 0 dB at 78 %, -50 at 10 %, -inf at
+    // the bottom; design/wing-polished.svg), the LED meters and peak hold
+    // are the shared frame kit's. Drawing only; levels go to the console
+    // in dB.
+    law: JK.laws.console,
+    led: function (cv, cols, segs) { JK.led(cv, cols, { segs: segs, law: JK.laws.console }); },
+    peaks: JK.peaks,
+    Knob: JK.Knob,
     dbText: function (db) {
       if (db == null) return "";
       if (db <= -143.9) return "-inf";

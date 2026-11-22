@@ -3,9 +3,12 @@
 // meter refresh ~15 times a second, the rest once a second.
 (function () {
   "use strict";
-  var W = window.Wing, el = W.el;
+  var W = window.Wing;
+  if (!W) return;
+  var el = W.el;
   var head = document.getElementById("head"), panelEl = document.getElementById("panel"), noteEl = document.getElementById("note");
   var picker = document.getElementById("pick");
+  W.hdr.set({ title: picker }); // the strip picker is the header's title
   var strip = "", localPick = "", detail = null, live = null, peaks = W.peaks(), tDetail = 0, tLive = 0;
   var panel = new W.Panel(panelEl, function (p, v) { return W.action("set_param", { path: p.path, value: v }); });
   panel.onError = function (e) { note(e, true); };
